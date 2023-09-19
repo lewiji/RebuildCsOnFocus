@@ -1,5 +1,9 @@
 #if TOOLS
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Runtime.Serialization.Json;
+using System.Text.Json;
 using Godot;
 namespace RebuildCsOnFocus.addons.rebuild_cs_on_focus;
 
@@ -7,36 +11,36 @@ namespace RebuildCsOnFocus.addons.rebuild_cs_on_focus;
 public partial class RebuildCsPlugin : EditorPlugin
 {
 	RebuildOnFocusUi _rebuildOnFocusUi = default!;
-	Callable? _buildCallable;
+	Callable _buildCallable;
 	bool _enabled;
 	bool _scanning;
 	public override void _EnterTree()
 	{
 		AddUiControl();
 		FindEditorBuildShortcut();
-		ConnectSignals();
-	}
-
-	void ConnectSignals()
-	{
-		_rebuildOnFocusUi.Enabled += RebuildOnFocusUiOnEnabled;
-		_rebuildOnFocusUi.Disabled += RebuildOnFocusUiOnDisabled;
-		GetTree().Root.FocusEntered += RootOnFocusEntered;
-		GetEditorInterface().GetResourceFilesystem().ResourcesReload += OnResourcesReload;
+		ConnectEditorSignals();
 	}
 	
-	void DisconnectSignals()
+	public override void _ExitTree()
 	{
-		_rebuildOnFocusUi.Enabled -= RebuildOnFocusUiOnEnabled;
-		_rebuildOnFocusUi.Disabled -= RebuildOnFocusUiOnDisabled;
-		GetTree().Root.FocusEntered -= RootOnFocusEntered;
-		GetEditorInterface().GetResourceFilesystem().ResourcesReload -= OnResourcesReload;
+		_enabled = false;
+		_scanning = false;
+		RemoveControlFromContainer(CustomControlContainer.Toolbar, _rebuildOnFocusUi);
+		_rebuildOnFocusUi.QueueFree();
+	}
+
+	void ConnectEditorSignals()
+	{
+		GetTree().Root.Connect(Window.SignalName.FocusEntered, new Callable(this, MethodName.RootOnFocusEntered));
+		GetEditorInterface().GetResourceFilesystem().Connect(EditorFileSystem.SignalName.ResourcesReload, new Callable(this, MethodName.OnResourcesReload));
 	}
 
 	void AddUiControl()
 	{
 		var dir = GetScript().As<CSharpScript>().ResourcePath.GetBaseDir();
 		_rebuildOnFocusUi = GD.Load<PackedScene>($"{dir}/rebuild_on_focus.tscn").Instantiate<RebuildOnFocusUi>();
+		_rebuildOnFocusUi.Connect(RebuildOnFocusUi.SignalName.Enabled, new Callable(this, MethodName.RebuildOnFocusUiOnEnabled));
+		_rebuildOnFocusUi.Connect(RebuildOnFocusUi.SignalName.Disabled, new Callable(this, MethodName.RebuildOnFocusUiOnDisabled));
 		AddControlToContainer(CustomControlContainer.Toolbar, _rebuildOnFocusUi);
 	}
 
@@ -44,7 +48,7 @@ public partial class RebuildCsPlugin : EditorPlugin
 	{
 		if (_scanning && resources.Any(res => res.GetFile().GetExtension() == "cs"))
 		{
-			_buildCallable?.Call();
+			_buildCallable.Call();
 		}
 	}
 
@@ -53,6 +57,13 @@ public partial class RebuildCsPlugin : EditorPlugin
 		if (!_enabled) return;
 		_scanning = true;
 		GetEditorInterface().GetResourceFilesystem().ScanSources();
+	}
+
+	public override void _Process(double delta)
+	{
+		if (!_scanning) return;
+		if (GetEditorInterface().GetResourceFilesystem().IsScanning()) return;
+		_scanning = false;
 	}
 
 	void RebuildOnFocusUiOnEnabled()
@@ -64,7 +75,7 @@ public partial class RebuildCsPlugin : EditorPlugin
 	{
 		_enabled = false;
 	}
-
+    
 	// Hacky way to fetch build button shortcut, since API access to build system or editor shortcuts isn't exposed
 	void FindEditorBuildShortcut()
 	{
@@ -83,15 +94,6 @@ public partial class RebuildCsPlugin : EditorPlugin
 				break;
 			}
 		}
-	}
-
-	public override void _ExitTree()
-	{
-		_buildCallable = null;
-		_enabled = false;
-		_scanning = false;
-		DisconnectSignals();
-		RemoveControlFromContainer(CustomControlContainer.Toolbar, _rebuildOnFocusUi);
 	}
 }
 #endif

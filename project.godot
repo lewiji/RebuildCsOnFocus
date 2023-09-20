@@ -20,4 +20,4 @@ project/assembly_name="RebuildCsOnFocus"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/plugin_refresher/plugin.cfg", "res://addons/rebuild_cs_on_focus/plugin.cfg", "res://addons/zylann.editor_debugger/plugin.cfg")
+enabled=PackedStringArray("res://addons/rebuild_cs_on_focus/plugin.cfg")

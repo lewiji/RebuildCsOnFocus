@@ -3,4 +3,8 @@
     <TargetFramework>net6.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="addons\rebuild_cs_on_focus\LICENSE" />
+    <Content Include="addons\rebuild_cs_on_focus\README.md" />
+  </ItemGroup>
 </Project>

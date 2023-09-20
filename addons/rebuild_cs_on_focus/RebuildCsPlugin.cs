@@ -54,6 +54,7 @@ public partial class RebuildCsPlugin : EditorPlugin
       if (_scanning && resources.Any(res => res.GetFile().GetExtension() == "cs"))
       {
          _buildCallable.Call();
+         GD.Print("Rebuilt .NET project");
       }
    }
 

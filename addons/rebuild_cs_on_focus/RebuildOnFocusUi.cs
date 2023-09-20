@@ -21,7 +21,6 @@ public partial class RebuildOnFocusUi : Control
 
 	void SetupCheckBox()
 	{
-		GD.Print("Setup");
 		_checkBox = GetNode<CheckBox>("CheckBox");
 		_checkBox.ButtonPressed = _config.GetValue("rebuild_on_focus", "enabled").AsBool();
 		_checkBox.Connect(BaseButton.SignalName.Toggled, new Callable(this, MethodName.CheckBoxOnToggled));

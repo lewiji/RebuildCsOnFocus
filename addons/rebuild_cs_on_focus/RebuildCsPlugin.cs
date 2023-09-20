@@ -14,6 +14,7 @@ public partial class RebuildCsPlugin : EditorPlugin
    Callable _buildCallable;
    bool _enabled;
    bool _scanning;
+   readonly StringName _msBuildPanelBuildMethod = new ("BuildProject");
 
    public override void _EnterTree()
    {
@@ -90,8 +91,12 @@ public partial class RebuildCsPlugin : EditorPlugin
       node.QueueFree();
 
       var msBuildPanel = bottomBar.GetChildren()
-         .First(c => c is VBoxContainer && c.HasMethod("BuildProject"));
-      _buildCallable = new Callable(msBuildPanel, "BuildProject");
+         .FirstOrDefault(c => c is VBoxContainer && c.HasMethod(_msBuildPanelBuildMethod));
+
+      if (msBuildPanel != null)
+      {
+         _buildCallable = new Callable(msBuildPanel, _msBuildPanelBuildMethod);
+      }
    }
 }
 #endif

@@ -1,30 +1,47 @@
 #if TOOLS
 using Godot;
+using Godot.Collections;
 
 namespace RebuildCsOnFocus.addons.rebuild_cs_on_focus;
 
 [Tool]
 public partial class RebuildOnFocusUi : Control
 {
-	[Signal] public delegate void EnabledEventHandler();
-	[Signal] public delegate void DisabledEventHandler();
+	public enum MenuOptions
+	{
+		RebuildOnFocus,
+		BuildOnPlay
+	}
 	
-	CheckBox _checkBox = default!;
+	[Signal] public delegate void SettingChangedEventHandler(int option, bool enabled);
+	
+	PopupMenu _popupMenu = default!;
 	ConfigFile _config = new ();
 	string _configPath = "user://rebuild_on_focus.cfg";
+	Dictionary<MenuOptions, string> _configKeys = new () {
+		{MenuOptions.RebuildOnFocus, "rebuild_on_focus"}, 
+		{MenuOptions.BuildOnPlay, "build_on_play"}
+	};
 	
 	public override void _Ready()
 	{
 		LoadOrCreateConfigFile();
-		SetupCheckBox();
+		InitPopupMenu();
 	}
 
-	void SetupCheckBox()
+	void InitPopupMenu()
 	{
-		_checkBox = GetNode<CheckBox>("CheckBox");
-		_checkBox.ButtonPressed = _config.GetValue("rebuild_on_focus", "enabled").AsBool();
-		_checkBox.Connect(BaseButton.SignalName.Toggled, new Callable(this, MethodName.CheckBoxOnToggled));
-		CheckBoxOnToggled(_checkBox.ButtonPressed);
+		_popupMenu = GetNode<MenuButton>("MenuButton").GetPopup();
+		InitPopupMenuItem(MenuOptions.RebuildOnFocus);
+		InitPopupMenuItem(MenuOptions.BuildOnPlay);
+		_popupMenu.Connect(PopupMenu.SignalName.IdPressed, new Callable(this, MethodName.MenuIdPressed));
+	}
+
+	void InitPopupMenuItem(MenuOptions option)
+	{
+		var enabled = LoadEnabledSetting(option);
+		_popupMenu.SetItemChecked(_popupMenu.GetItemIndex((int)option), enabled);
+		EmitSignal(SignalName.SettingChanged, (int)option, enabled);
 	}
 
 	void LoadOrCreateConfigFile()
@@ -35,20 +52,29 @@ public partial class RebuildOnFocusUi : Control
 		}
 		else
 		{
-			SaveEnabledSetting(true);
+			SaveEnabledSetting(MenuOptions.RebuildOnFocus, true);
+			SaveEnabledSetting(MenuOptions.BuildOnPlay, true);
 		}
 	}
 
-	void SaveEnabledSetting(bool enabled)
+	bool LoadEnabledSetting(MenuOptions option)
 	{
-		_config.SetValue("rebuild_on_focus", "enabled", enabled);
+		return _config.GetValue(_configKeys[option], "enabled", true).AsBool();
+	}
+
+	void SaveEnabledSetting(MenuOptions option, bool enabled)
+	{
+		_config.SetValue(_configKeys[option], "enabled", enabled);
 		_config.Save(_configPath);
 	}
 
-	void CheckBoxOnToggled(bool pressed)
+	void MenuIdPressed(int id)
 	{
-		EmitSignal(pressed ? SignalName.Enabled : SignalName.Disabled);
-		SaveEnabledSetting(pressed);
+		var itemIndex = _popupMenu.GetItemIndex(id);
+		_popupMenu.ToggleItemChecked(itemIndex);
+		var pressed = _popupMenu.IsItemChecked(itemIndex);
+		SaveEnabledSetting((MenuOptions)id, pressed);
+		EmitSignal(SignalName.SettingChanged, id, pressed);
 	}
 }
 #endif

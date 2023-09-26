@@ -10,8 +10,14 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_rsqhw")
 
-[node name="CheckBox" type="CheckBox" parent="."]
+[node name="MenuButton" type="MenuButton" parent="."]
 layout_mode = 2
-tooltip_text = "Rebuild C# solution when editor window gains focus"
-button_pressed = true
 text = "Rebuild"
+item_count = 2
+popup/item_0/text = "Rebuild on focus"
+popup/item_0/checkable = 1
+popup/item_0/checked = true
+popup/item_0/id = 0
+popup/item_1/text = "Build on Play"
+popup/item_1/checkable = 1
+popup/item_1/id = 1
